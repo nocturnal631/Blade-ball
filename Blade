@@ -1,0 +1,144 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "Soul hub",
+   Icon = 0,
+   LoadingTitle = "Soul hub",
+   LoadingSubtitle = "by nonamefound",
+   Theme = "Ocean", 
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false,
+
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil,
+      FileName = "Big Hub"
+   },
+
+   Discord = {
+      Enabled = false,
+      Invite = "noinvitelink", 
+      RememberJoins = true 
+   },
+
+   KeySystem = false,
+   KeySettings = {
+      Title = "Untitled",
+      Subtitle = "Key System",
+      Note = "No method of obtaining the key is provided", 
+      FileName = "Key", 
+      SaveKey = true, 
+      GrabKeyFromSite = false, 
+      Key = {"Hello"} 
+   }
+})
+
+local MainTab = Window:CreateTab("Main", 4483362458)
+
+Rayfield:Notify({
+   Title = "Hello! thanks for using the hub",
+   Content = "by nonamefound",
+   Duration = 6.5,
+   Image = 4483362458,
+})
+
+local IsAutoParrying = false
+local Parried = false  -- Declare Parried correctly
+local Cooldown = 0
+local AutoparryToggle = MainTab:CreateToggle({
+   Name = "auto parry",
+   CurrentValue = false,
+   Flag = "AutoparryToggle",
+   Callback = function(state)
+      IsAutoParrying = state
+      if not IsAutoParrying then  -- If auto parry is turned off, reset
+         Parried = false
+         Cooldown = tick()  -- Reset cooldown
+      end
+   end
+})
+
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local Player = Players.LocalPlayer
+
+-- Function to get the ball with the "realBall" attribute
+local function GetBall()
+    for _, Ball in ipairs(workspace.Balls:GetChildren()) do
+        if Ball:GetAttribute("realBall") then
+            return Ball
+        end
+    end
+end
+
+-- Reset connection on attribute change
+local Connection = nil
+local function ResetConnection()
+    if Connection then
+        Connection:Disconnect()
+        Connection = nil
+    end
+end
+
+workspace.Balls.ChildAdded:Connect(function()
+    local Ball = GetBall()
+    if not Ball then return end
+    ResetConnection()
+    Connection = Ball:GetAttributeChangedSignal("target"):Connect(function()
+        Parried = false
+    end)
+end)
+
+-- Auto Parry Logic
+RunService.Heartbeat:Connect(function()
+    if IsAutoParrying then
+        local Ball = GetBall()
+        local HRP = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+        if not Ball or not HRP then return end
+        
+        local Speed = Ball.zoomies.VectorVelocity.Magnitude
+        local Distance = (HRP.Position - Ball.Position).Magnitude
+        
+        if Ball:GetAttribute("target") == Player.Name and not Parried and Distance / Speed <= 0.55 then
+            if tick() - Cooldown >= 1 then  -- Cooldown of 1 second
+                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                Parried = true
+                Cooldown = tick()  -- Reset cooldown
+            end
+        end
+    end
+end)
+
+local PlayerTab = Window:CreateTab("Player", 4483362458) -- Title, Image
+
+local Slider = PlayerTab:CreateSlider({
+   Name = "Give Walkspeed",
+   Range = {0, 500},
+   Increment = 1,
+   Suffix = "Speed",
+   CurrentValue = 16,
+   Flag = "Slider1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(v)
+   game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = v
+   -- The function that takes place when the slider changes
+   -- The variable (Value) is a number which correlates to the value the slider is currently at
+   end,
+})
+
+local Button = MainTab:CreateButton({
+   Name = "Manual spam (gui)",
+   Callback = function()
+   getgenv().Paws = {
+    ["AutoParry"] = true,
+    ["PingBased"] = true,
+    ["PingBasedOffset"] = 0,
+    ["DistanceToParry"] = 0.4,
+    ["BallSpeedCheck"] = true,
+}
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Alexisisback/Blade-ball-Auto-parry-Etc/main/Manual%20spam%2BAuto%20parry"))()
+   -- The function that takes place when the button is pressed
+   end,
+})
